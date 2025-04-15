@@ -15,7 +15,7 @@ class FluxLoraMerger:
         return {
             "required": {
                 "unet_model": ("MODEL",),
-                "merge_strategy": (["additive", "average", "sequential"],),
+                "merge_strategy": (["sequential", "additive", "average"],),
                 "enable_lora1": ("BOOLEAN", {"default": False}),
                 "lora1": (get_filename_list("loras"),),
                 "lora1_weight": ("FLOAT", {"default": 1.0}),
@@ -41,6 +41,7 @@ class FluxLoraMerger:
     def merge_with_comfy(self, model, lora_path, weight, ignored_counter, report_list):
         lora_sd = load_file(lora_path)
 
+        # 🔇 Mute comfy logs & stdout
         comfy_logger = logging.getLogger()
         previous_level = comfy_logger.level
         comfy_logger.setLevel(logging.ERROR)
@@ -68,8 +69,6 @@ class FluxLoraMerger:
 
         patcher = unet_model
         base_model = patcher.model
-        ignored_lora_keys = [0]
-        lora_report = []
 
         lora_list = [
             (enable_lora1, lora1, lora1_weight),
@@ -78,6 +77,19 @@ class FluxLoraMerger:
             (enable_lora4, lora4, lora4_weight),
         ]
         active_loras = [(get_full_path("loras", l), w) for e, l, w in lora_list if e and l]
+
+        if len(active_loras) == 0:
+            print("[MERGE] No LoRA enabled — skipping merge.")
+            return (unet_model, "No LoRA selected for merge.")
+
+        print("[MERGE] Cleaning VRAM before starting merge...")
+        torch.cuda.synchronize()
+        torch.cuda.empty_cache()
+        gc.collect()
+
+        ignored_lora_keys = [0]
+        lora_report = []
+
         print(f"[MERGE] Starting {merge_strategy} merge with {len(active_loras)} LoRA(s)")
 
         if merge_strategy == "sequential":
@@ -88,18 +100,27 @@ class FluxLoraMerger:
             threshold = 1e-6
             merged_delta = {}
             base_sd = base_model.state_dict()
+            keys_to_consider = set(base_sd.keys())
 
             for lora_path, weight in active_loras:
                 patcher = self.merge_with_comfy(patcher, lora_path, weight, ignored_lora_keys, lora_report)
+                torch.cuda.synchronize()
+
                 current_sd = patcher.model.state_dict()
 
                 for k in current_sd.keys():
-                    if k not in base_sd:
+                    if k not in keys_to_consider:
                         continue
 
-                    base_val_fp32 = base_sd[k].to(torch.float32)
-                    current_val_fp32 = current_sd[k].to(torch.float32)
-                    diff = current_val_fp32 - base_val_fp32
+                    base_val = base_sd[k]
+                    current_val = current_sd[k]
+
+                    if base_val.shape != current_val.shape:
+                        continue
+
+                    base_fp32 = base_val.to(torch.float32)
+                    curr_fp32 = current_val.to(torch.float32)
+                    diff = curr_fp32 - base_fp32
 
                     if diff.abs().max().item() > threshold:
                         if k not in merged_delta:
@@ -109,15 +130,19 @@ class FluxLoraMerger:
 
             if merge_strategy == "average" and active_loras:
                 for k in merged_delta:
-                    merged_delta[k] = merged_delta[k] / len(active_loras)
+                    merged_delta[k] /= len(active_loras)
 
             with torch.no_grad():
                 for name, param in base_model.named_parameters():
                     if name in merged_delta:
-                        new_value = base_sd[name].to(torch.float32) + merged_delta[name]
-                        param.copy_(new_value.to(param.dtype))
+                        param.copy_((base_sd[name].to(torch.float32) + merged_delta[name]).to(param.dtype))
 
-        # Rapport fusion (console + UI)
+            merged_delta.clear()
+            del merged_delta
+            del base_sd
+            torch.cuda.empty_cache()
+            gc.collect()
+
         debug_text = ""
         if lora_report:
             debug_text += "LoRA Merge Report:\n"
@@ -132,7 +157,6 @@ class FluxLoraMerger:
             print(msg)
             debug_text += f"\n{msg}"
 
-        # 🔒 Sauvegarde sécurisée avec libération mémoire
         if save_model:
             print("[SAVE] Preparing to save model...")
             torch.cuda.synchronize()
