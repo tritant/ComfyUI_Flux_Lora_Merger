@@ -36,3 +36,4 @@ A custom ComfyUI node to **merge up to 4 LoRA models into a Flux.1-Dev UNet**
 |------------------|----------|-------------|
 | `model`          | `MODEL`  | The merged UNet model |
 
+![Capture d'écran 2025-04-15 143351](https://github.com/user-attachments/assets/3aad6d4d-9701-440f-82b4-a33088b4aa5b)
