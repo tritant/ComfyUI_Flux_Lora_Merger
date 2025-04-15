@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-flux-lora-merger"
 description = "Advanced LoRA merging node for ComfyUI (additive, average, sequential)"
-version = "1.0.1"
+version = "1.0.0"
 license = { file = "LICENSE.txt" }
 
 [project.urls]
