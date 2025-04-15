@@ -2,6 +2,8 @@
 
 A custom ComfyUI node to **merge up to 4 LoRA models into a Flux.1-Dev UNet**
 
+⚠️ If you experience VRAM issues (OOM) when saving, try using the sequential strategy instead of additive or average. It avoids direct weight modifications and makes saving more memory-efficient.
+
 ---
 
 ## ✨ Features
