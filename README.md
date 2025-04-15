@@ -1,6 +1,6 @@
 # Flux LoRA Merger — Custom Node for ComfyUI
 
-A custom ComfyUI node to **merge up to 4 LoRA models into a UNet**
+A custom ComfyUI node to **merge up to 4 LoRA models into a Flux.1-Dev UNet**
 
 ---
 
@@ -12,12 +12,7 @@ A custom ComfyUI node to **merge up to 4 LoRA models into a UNet**
   - `additive`: weighted sum of LoRA deltas
   - `average`: average of LoRA deltas
   - `sequential`: apply one after another
-- ✅ Uses `load_lora_for_models` (official ComfyUI function)
-- ✅ Logs number of keys applied (UNet) and ignored (e.g., text encoder)
-- ✅ Displays a clean merge report in both console and UI
 - ✅ Option to **save the final merged model** in `.safetensors`
-- ✅ Clears GPU VRAM before saving (avoids OOM)
-- ✅ Catches memory errors during save and prints helpful warnings
 
 ---
 
@@ -40,20 +35,4 @@ A custom ComfyUI node to **merge up to 4 LoRA models into a UNet**
 | Output           | Type     | Description |
 |------------------|----------|-------------|
 | `model`          | `MODEL`  | The merged UNet model |
-| `merge_report`   | `STRING` | A table summarizing the applied and ignored keys |
 
----
-
-## 📊 Merge Report Example
-
-```text
-LoRA Merge Report:
-| Filename              | UNet Keys | Ignored Keys |
-|-----------------------|-----------|---------------|
-| style1.safetensors    |   912     |     1014      |
-| style2.safetensors    |   912     |     1014      |
-| style3.safetensors    |   912     |     1014      |
-| style4.safetensors    |   912     |     1014      |
-
-⚠️ 4056 LoRA keys ignored (non-UNet, e.g. text encoder)
-# ComfyUI_Flux_Lora_Merger
