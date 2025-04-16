@@ -8,6 +8,6 @@ license = { file = "LICENSE.txt" }
 Repository = "https://github.com/tritant/ComfyUI_Flux_Lora_Merger"
 
 [tool.comfy]
-PublisherId = "@tritant"
+PublisherId = "tritant"
 DisplayName = "Flux LoRA Merger"
 Icon = "https://raw.githubusercontent.com/tritant/ComfyUI_Flux_Lora_Merger/main/icon.png"
